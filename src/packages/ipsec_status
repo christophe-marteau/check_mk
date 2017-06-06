@@ -1,6 +1,6 @@
 {'author': 'Christophe Marteau (christophe.marteau@univ-tlse3.fr)',
  'description': 'The check ipsec_status check strongswan ipsec status for daemon and tunnels. (Tested on ubuntu and pfsense)',
- 'download_url': '',
+ 'download_url': 'https://github.com/christophe-marteau/check_mk',
  'files': {'agents': ['ipsec_status'],
            'bin': [],
            'checkman': ['ipsec_status.daemon', 'ipsec_status.tunnel'],
