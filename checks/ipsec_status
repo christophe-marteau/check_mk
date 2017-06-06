@@ -1,0 +1,156 @@
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+# <christophe.marteau@univ-tlse3.fr>, 12 May 2017
+
+import collections
+
+# the inventory function (dummy)
+def inventory_ipsec_status_daemon( info ):
+   for line in info :
+     type = '{}'.format( line[0] )
+     if type == 'IPSEC' :
+       ipsecType = '{}'.format( line[1] )
+       if ipsecType == 'Daemon' :
+         yield( ipsecType, None )
+
+def inventory_ipsec_status_tunnel( info ):
+   for line in info :
+     type = '{}'.format( line[0] )
+     if type == 'IPSEC' :
+       ipsecType = '{}'.format( line[1] )
+       if ipsecType == 'Tunnel' :
+         ipsecTunnelName = '{}'.format( line[2] )
+         yield( ipsecTunnelName, None )
+
+
+# the check function (dummy)
+def check_ipsec_status_daemon( item, params, info ):
+
+  resultCode = 3
+  resultStatus = 'UNKNOWN'
+  resultMessage = 'None'
+
+  perfdata = []
+  for line in info :
+    ipsecType = '{}'.format( line[1] )
+    ipsecDaemonStatus = '{}'.format( line[2] )
+    ipsecDaemonMsg = '{}'.format( line[3] )
+    if ipsecType == 'Daemon' :   
+      if ipsecDaemonStatus != 'OK' :
+        resultMessage = ' '.join( '{}'.format( line[3:] ) )
+        if ipsecDaemonStatus == 'CRITICAL' :
+          resultCode = 2
+          resultStatus = 'CRITICAL'
+        return( resultCode, 'IPSEC Daemon is {} ( {} )'.format( resultStatus, resultMessage ), perfdata )
+      else :
+        ipsecUptime = int( line[4] )
+        perfdata.append( ( 'uptime', int( ipsecUptime * 86400 ) ) )
+        ipsecConnectionUp = int( line[16] )
+        perfdata.append( ( 'UpConnection', ipsecConnectionUp ) )
+        ipsecConnectionPending = int( line[17] )
+        perfdata.append( ( 'PendingConnection', ipsecConnectionPending ) )
+        ipsecThreadIdle = int( line[5] )
+        perfdata.append( ( 'IdleThread', ipsecThreadIdle ) )
+        ipsecThreadWorking = int( line[6] )
+        perfdata.append( ( 'WorkingThread', ipsecThreadWorking ) )
+        ipsecThreadCritical = int( line[7] )
+        perfdata.append( ( 'CriticalThread', ipsecThreadCritical ) )
+        ipsecThreadHigh = int( line[8] )
+        perfdata.append( ( 'HighThread', ipsecThreadHigh ) )
+        ipsecThreadMedium = int( line[9] )
+        perfdata.append( ( 'MediumThread', ipsecThreadMedium ) )
+        ipsecThreadLow = int( line[10] )
+        perfdata.append( ( 'LowThread', ipsecThreadLow ) )
+        ipsecJobSheduled = int( line[11] )
+        perfdata.append( ( 'SheduledJob', ipsecJobSheduled ) )
+        ipsecJobCritical = int( line[12] )
+        perfdata.append( ( 'CriticalJob', ipsecJobCritical ) )
+        ipsecJobHigh = int( line[13] )
+        perfdata.append( ( 'HighJob', ipsecJobHigh ) )
+        ipsecJobMedium = int( line[14] )
+        perfdata.append( ( 'MediumJob', ipsecJobMedium ) )
+        ipsecJobLow = int( line[15] )
+        perfdata.append( ( 'LowJob', ipsecJobLow ) )
+        
+        resultCode = 0
+        resultStatus = 'OK'
+        resultMessage = 'uptime : {} days, connections : {} up / {} pending, threads : {} idle / {} working / {} critical / {} high / {} medium / {} low, jobs : {} scheduled / {} critical / {} high / {} medium / {} low'.format( ipsecUptime, ipsecConnectionUp, ipsecConnectionPending, ipsecThreadIdle, ipsecThreadWorking, ipsecThreadCritical, ipsecThreadHigh, ipsecThreadMedium, ipsecThreadLow, ipsecJobSheduled, ipsecJobCritical, ipsecJobHigh, ipsecJobMedium, ipsecJobLow )  
+
+        return( resultCode, 'IPSEC Daemon is {} ( {} )'.format( resultStatus, resultMessage ), perfdata )
+
+# the check function (dummy)
+def check_ipsec_status_tunnel( item, params, info ):
+
+  resultCode = 3
+  resultStatus = 'UNKNOWN'
+  resultMessage = 'None'
+
+  now = int( time.time() )
+
+  perfdata = []
+
+  for line in info :
+    ipsecType = '{}'.format( line[1] )
+    ipsecTunnelName = '{}'.format( line[2] )
+    if ipsecType == 'Tunnel' :
+      ipsecTunnelEstablished = int( line[3] )
+      perfdata.append( ( 'established', '{}'.format( ipsecTunnelEstablished ) ) )
+      ipsecTunnelInstalled = int( line[4] )
+      perfdata.append( ( 'installed', '{}'.format( ipsecTunnelInstalled ) ) )
+      ipsecTunnelBytesIn = float( line[5] )
+      
+      ipsecTunnelBytesOut = float( line[6] )
+      ipsecTunnelPacketIn = float( line[7] )
+      ipsecTunnelPacketOut = float( line[8] )
+      
+      ipsecTunnelBytesInRate = get_rate( 'ipsec_status.tunnel_{}_Bytes_In'.format( ipsecTunnelName ), now, ipsecTunnelBytesIn )
+      perfdata.append( ( 'Bytes-In', '{}'.format( ipsecTunnelBytesInRate ) ) )
+      ipsecTunnelBytesOutRate = get_rate( 'ipsec_status.tunnel_{}_Bytes_Out'.format( ipsecTunnelName ), now, ipsecTunnelBytesOut )
+      perfdata.append( ( 'Bytes-Out', '{}'.format( ipsecTunnelBytesOutRate ) ) )
+      ipsecTunnelPacketInRate = get_rate( 'ipsec_status.tunnel_{}_Packet_In'.format( ipsecTunnelName ), now, ipsecTunnelPacketIn )
+      perfdata.append( ( 'Packet-In', '{}'.format( ipsecTunnelPacketInRate ) ) )
+      ipsecTunnelPacketOutRate = get_rate( 'ipsec_status.tunnel_{}_Packet_Out'.format( ipsecTunnelName ), now, ipsecTunnelPacketOut )
+      perfdata.append( ( 'Packet-Out', '{}'.format( ipsecTunnelPacketOutRate ) ) )
+      
+      if ipsecTunnelEstablished < 1 :
+        resultCode = 2
+        resultStatus = 'CRITICAL'
+        resultMessage = 'Tunnel not established : {} established / {} installed'.format( ipsecTunnelEstablished, ipsecTunnelInstalled )
+      elif ipsecTunnelInstalled < 1 :
+        resultCode = 2
+        resultStatus = 'CRITICAL'
+        resultMessage = 'Tunnel not installed : {} established / {} installed'.format( ipsecTunnelEstablished, ipsecTunnelInstalled )
+      else :
+        resultCode = 0
+        resultStatus = 'OK'
+        resultMessage = 'tunnel : {} established / {} installed, Bytes : {} in / {} out, Packet : {} in / {} out'.format( ipsecTunnelEstablished, ipsecTunnelInstalled, ipsecTunnelBytesInRate, ipsecTunnelBytesOutRate, ipsecTunnelPacketInRate, ipsecTunnelPacketOutRate )
+      
+      return( resultCode, 'IPSEC Tunnel "{}" is {} ( {} )'.format( ipsecTunnelName, resultStatus, resultMessage ), perfdata )
+
+  
+
+# declare the check to Check_MK
+check_info["ipsec_status.daemon"] = {
+  'check_function':      check_ipsec_status_daemon,
+  'inventory_function':  inventory_ipsec_status_daemon,
+  'service_description': 'IPSEC %s status',
+  'has_perfdata':        True
+}
+
+check_info["ipsec_status.tunnel"] = {
+  'check_function':      check_ipsec_status_tunnel,
+  'inventory_function':  inventory_ipsec_status_tunnel,
+  'service_description': 'IPSEC Tunnel %s status',
+  'has_perfdata':        True
+}

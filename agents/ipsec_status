@@ -1,0 +1,176 @@
+#!/usr/local/bin/bash
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+# <christophe.marteau@univ-tlse3.fr>, 22 May 2017
+
+function debug() {
+  local debugMsgType="${1}"
+  local debugMsg="${2}"
+  if [ ${DEBUG:-0} -gt 0 ]
+  then
+    case ${debugMsgType} in
+      "info")   
+        debugHeader="  * [i]"
+        ;;
+      "mod")   
+        debugHeader="  * [m]"
+        ;;
+      *)
+        debugHeader=""
+        ;;
+    esac
+    echo "# DEBUG: ${debugHeader} ${debugMsg}"
+  fi
+}
+
+ipsecDaemonHeader='IPSEC Daemon'
+ipsecDaemonState='UNKNOWN'
+ipsecDaemonMsg='Unable to get ipsec state'
+source "${MK_CONFDIR:-"/etc/check_mk"}/${IPSEC_STATUS_CONFIG_FILE:-"ipsec_status.cfg"}" 2>/dev/null
+if [ ${?} -eq 0 ]
+then
+  if [ -f "${ipsecBinary}" ]
+  then
+    ipsecDaemonState='CRITICAL'
+    ipsecDaemonMsg='ipsec daemon not running'
+    ipsecDaemonSecurityAssociationsUp=0
+    ipsecDaemonSecurityAssociationsConnecting=0
+    echo "<<<ipsec_status>>>"
+    debug "" "Parsing ipsec daemon status ..."
+    IFS="
+"
+    ipsecDaemonStatusRegexp='^Status[[:space:]]of[[:space:]]IKE[[:space:]]charon[[:space:]]daemon[[:space:]][^:]+:$'
+    ipsecDaemonUptimeRegexp='^[[:space:]]+uptime:[[:space:]]([^[:space:]]+)[[:space:]]([^,]+),.*$'
+    ipsecDaemonWorkerRegexp='^[[:space:]]+worker[[:space:]]threads:[[:space:]]([^[:space:]]+)[[:space:]]of[[:space:]]([^[:space:]]+)[[:space:]]idle,[[:space:]]([^/]+)/([^/]+)/([^/])/([^[:space:]]+)[[:space:]]working,[[:space:]]job[[:space:]]queue:[[:space:]]([^/]+)/([^/]+)/([^/])/([^,]+),[[:space:]]scheduled:[[:space:]](.*)$'
+    ipsecDaemonSecurityAssociationRegexp='^Security[[:space:]]Associations[[:space:]]\(([^[:space:]]+)[[:space:]]up,[[:space:]]([^[:space:]]+)[[:space:]]connecting\):$'
+    ipsecDaemonUptime="0"
+    ipsecDaemonThreadMsg="0 0 0 0 0 0"
+    ipsecDaemonJobMsg="0 0 0 0 0"
+    ipsecDaemonSecurityAssociationsMsg="0 0"
+    
+    for line in $( ${ipsecBinary} statusall "FakeConnectionName" 2>&1 )
+    do
+      debug "info" "Found line : ${line}"	    
+
+      # Parsing for ipsec daemon status
+      if [[ ${line} =~ ${ipsecDaemonStatusRegexp} ]]
+      then
+        ipsecDaemonState='OK'
+        ipsecDaemonMsg='None'
+        debug "info" "${ipsecDaemonHeader} state is ${ipsecDaemonState} (${ipsecDaemonMsg})"
+      elif [[ ${line} =~ ${ipsecDaemonUptimeRegexp} ]]
+      then
+        ipsecDaemonUptime="${BASH_REMATCH[1]}"
+        ipsecDaemonUptimeScale="${BASH_REMATCH[2]}"
+        if [ ${ipsecDaemonUptimeScale} != 'days' ]
+        then
+          ipsecDaemonUptime=0
+        fi
+        debug "info" "${ipsecDaemonHeader} uptime is ${ipsecDaemonUptime}"
+      elif [[ ${line} =~ ${ipsecDaemonWorkerRegexp} ]]
+      then
+        ipsecDaemonThreadIdle="${BASH_REMATCH[1]}"
+        ipsecDaemonThreadTotal="${BASH_REMATCH[2]}"
+        ipsecDaemonThreadCritical="${BASH_REMATCH[3]}"
+        ipsecDaemonThreadHigh="${BASH_REMATCH[4]}"
+        ipsecDaemonThreadMedium="${BASH_REMATCH[5]}"
+        ipsecDaemonThreadLow="${BASH_REMATCH[6]}"
+        ipsecDaemonJobCritical="${BASH_REMATCH[7]}"
+        ipsecDaemonJobHigh="${BASH_REMATCH[8]}"
+        ipsecDaemonJobMedium="${BASH_REMATCH[9]}"
+        ipsecDaemonJobLow="${BASH_REMATCH[10]}"
+        ipsecDaemonJobScheduled="${BASH_REMATCH[11]}"
+        debug "info" "${ipsecDaemonHeader} Threads ( total = ${ipsecDaemonThreadTotal}, idle = ${ipsecDaemonThreadIdle}, critical = ${ipsecDaemonThreadCritical}, high = ${ipsecDaemonThreadHigh}, medium = ${ipsecDaemonThreadMedium}, low = ${ipsecDaemonThreadLow} )" 
+        debug "info" "${ipsecDaemonHeader} Jobs ( scheduled = ${ipsecDaemonJobScheduled}, critical = ${ipsecDaemonJobCritical}, high = ${ipsecDaemonJobHigh}, medium = ${ipsecDaemonJobMedium}, low = ${ipsecDaemonJobLow} )" 
+        ipsecDaemonThreadMsg="${ipsecDaemonThreadTotal} ${ipsecDaemonThreadIdle} ${ipsecDaemonThreadCritical} ${ipsecDaemonThreadHigh} ${ipsecDaemonThreadMedium} ${ipsecDaemonThreadLow}"
+        ipsecDaemonJobMsg="${ipsecDaemonJobScheduled} ${ipsecDaemonJobCritical} ${ipsecDaemonJobHigh} ${ipsecDaemonJobMedium} ${ipsecDaemonJobLow}"
+      elif [[ ${line} =~ ${ipsecDaemonSecurityAssociationRegexp} ]]
+      then
+        ipsecDaemonSecurityAssociationsUp="${BASH_REMATCH[1]:-0}"
+        ipsecDaemonSecurityAssociationsConnecting="${BASH_REMATCH[2]:-0}"
+        ipsecDaemonSecurityAssociationsMsg="${ipsecDaemonSecurityAssociationsUp} ${ipsecDaemonSecurityAssociationsConnecting}"
+        debug "info" "${ipsecDaemonHeader} Security associations : ${ipsecDaemonSecurityAssociationsUp} up and ${ipsecDaemonSecurityAssociationsConnecting} connecting"
+      fi
+    done
+    if [ "${ipsecDaemonState}" != 'OK' ]
+    then
+      ipsecDaemonUptime=''
+      ipsecDaemonThreadMsg=''
+      ipsecDaemonJobMsg=''
+      ipsecDaemonSecurityAssociationsMsg=''
+    fi
+    echo "${ipsecDaemonHeader} ${ipsecDaemonState} ${ipsecDaemonMsg} ${ipsecDaemonUptime} ${ipsecDaemonThreadMsg} ${ipsecDaemonJobMsg} ${ipsecDaemonSecurityAssociationsMsg}"
+
+    ipsecTunnelHeader='IPSEC Tunnel' 
+    ipsecTunnelState='UNKNOWN' 
+    ipseciTunnelMsg='Unable to get ipsec tunnel state'
+    ipsecTunnelTotal="$(( ${ipsecDaemonSecurityAssociationsUp} + ${ipsecDaemonSecurityAssociationsConnecting} ))"
+    debug "" "Parsing ipsec tunnels status ..."
+    debug "info" "Found ${ipsecTunnelTotal} tunnel(s) ( ${ipsecDaemonSecurityAssociationsUp} up and ${ipsecDaemonSecurityAssociationsConnecting} connecting )"
+
+
+    for (( tunnelID=1; tunnelID <= ${ipsecTunnelTotal}; tunnelID++ ))
+    do
+      ipsecEstablishedTunnel=0
+      ipsecInstalledTunnel=0
+      ipsecTunnelBytesIn=0
+      ipsecTunnelPacketIn=0
+      ipsecTunnelBytesOut=0
+      ipsecTunnelPacketOut=0
+      ipsecTunnelEstablishedRegexp="^[[:space:]]+${ipsecTunnelNamePrefix}${tunnelID}\[[^]]+\]:[[:space:]]ESTABLISHED[[:space:]]([^,]+),.*$"
+      ipsecTunnelInstallededRegexp="^[[:space:]]+${ipsecTunnelNamePrefix}${tunnelID}\{[^}]+\}:[[:space:]]+INSTALLED,[[:space:]]TUNNEL,[[:space:]](.*)$"
+      ipsecTunnelStatsRegexp="^[[:space:]]+${ipsecTunnelNamePrefix}${tunnelID}\{[^}]+\}:[[:space:]]+[^,]+,[[:space:]]([^[:space:]]+)[[:space:]]bytes_i([[:space:]]\(([^[:space:]]+)[[:space:]]pkts,[^)]+\))?,[[:space:]]([^[:space:]]+)[[:space:]]bytes_o([[:space:]]\(([^[:space:]]+)[[:space:]]pkts,[^)]+\))?,[[:space:]].*$"
+      debug "" "Parsing ipsec tunnel with id '${ipsecTunnelNamePrefix}${tunnelID}'  ..."
+      for line in $( ${ipsecBinary} statusall "${ipsecTunnelNamePrefix}${tunnelID}" 2>&1 )
+      do
+        debug "info" "Found line : ${line}"
+        if [[ ${line} =~ ${ipsecTunnelEstablishedRegexp} ]]
+        then
+          ipsecTunnelEstablishedMsg="${BASH_REMATCH[1]}"
+          (( ipsecEstablishedTunnel ++ ))
+          debug "info" "Tunnel '${ipsecTunnelNamePrefix}${tunnelID}' is ESTABLIHED (${ipsecTunnelEstablishedMsg})"
+          
+        elif [[ ${line} =~ ${ipsecTunnelInstallededRegexp} ]]
+        then
+          info="${BASH_REMATCH[1]}"
+          debug "info" "Tunnel '${ipsecTunnelNamePrefix}${tunnelID}' is INSTALLED (${info})"
+          (( ipsecInstalledTunnel ++ ))
+        elif [[ ${line} =~ ${ipsecTunnelStatsRegexp} ]]
+        then
+          ipsecTunnelCurrentBytesIn="${BASH_REMATCH[1]:-0}"
+          ipsecTunnelCurrentPacketIn="${BASH_REMATCH[3]:-0}"
+          ipsecTunnelCurrentBytesOut="${BASH_REMATCH[4]:-0}"
+          ipsecTunnelCurrentPacketOut="${BASH_REMATCH[6]:-0}"
+          debug "info" "Tunnel '${ipsecTunnelNamePrefix}${tunnelID}' current stats : bytes ( ${ipsecTunnelCurrentBytesIn} in / ${ipsecTunnelCurrentBytesOut} out ) and packet ( ${ipsecTunnelCurrentPacketIn} in / ${ipsecTunnelCurrentPacketOut} out )"
+          ipsecTunnelBytesIn=$(( ipsecTunnelBytesIn + ipsecTunnelCurrentBytesIn ))
+          ipsecTunnelPacketIn=$(( ipsecTunnelPacketIn + ipsecTunnelCurrentPacketIn ))
+          ipsecTunnelBytesOut=$(( ipsecTunnelBytesOut + ipsecTunnelCurrentBytesOut ))
+          ipsecTunnelPacketOut=$(( ipsecTunnelPacketOut + ipsecTunnelCurrentPacketOut ))
+        fi
+      done
+      debug "info" "Found ${ipsecEstablishedTunnel} established tunnels, ${ipsecInstalledTunnel} installed tunnels for '${ipsecTunnelNamePrefix}${tunnelID}'"
+      debug "info" "Tunnel '${ipsecTunnelNamePrefix}${tunnelID}' total stats : bytes ( ${ipsecTunnelBytesIn} in / ${ipsecTunnelBytesOut} out ) and packet ( ${ipsecTunnelPacketIn} in / ${ipsecTunnelPacketOut} out )"
+      echo "${ipsecTunnelHeader} ${ipsecTunnelNamePrefix}${tunnelID} ${ipsecEstablishedTunnel} ${ipsecInstalledTunnel} ${ipsecTunnelBytesIn} ${ipsecTunnelBytesOut} ${ipsecTunnelPacketIn} ${ipsecTunnelPacketOut}"
+    done 
+  else
+    echo "Unable to find ipsec binary file '${ipsecBinary}'"
+    exit ${?}
+  fi
+else
+  echo "Unable to find config file '${MK_CONFDIR:-"/etc/check_mk"}/${IPSEC_STATUS_CONFIG_FILE:-"ipsec_status.cfg"}'"
+  exit ${?}
+fi
+
+

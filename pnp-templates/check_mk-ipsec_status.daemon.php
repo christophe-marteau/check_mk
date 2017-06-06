@@ -1,0 +1,102 @@
+<?php
+
+# Uptime Graph
+#
+$opt[1]  = "--vertical-label 'Uptime (d)' -l0 --title \"Uptime (time since last reboot)\" ";
+$def[1]  = "";
+$def[1] .= rrd::def("sec", $RRDFILE[1], $DS[1], "MAX");
+$ds_name[1] = $LABEL[1];
+$def[1] .= "CDEF:uptime=sec,86400,/ ";
+$def[1] .= "AREA:uptime#80f000:\"Uptime (days)\" ";
+$def[1] .= "LINE:uptime#408000 ";
+$def[1] .= "GPRINT:uptime:LAST:\"%7.2lf %s LAST\" ";
+$def[1] .= "GPRINT:uptime:MAX:\"%7.2lf %s MAX\" ";
+
+
+$opt[2]  = "--vertical-label 'Connections' -l0 --title \"IPSEC Tunnels connections\" ";
+$def[2]  = "";
+$def[2] .= rrd::def("up", $RRDFILE[2], $DS[2], "MAX");
+$def[2] .= rrd::def("pending", $RRDFILE[3], $DS[3], "MAX");
+$ds_name[2] = $LABEL[2];
+$def[2] .= "AREA:up".rrd::color(2).":\"Up\":STACK ";
+$def[2] .= "GPRINT:up:LAST:\"%7.2lf %s LAST\" ";
+$def[2] .= "GPRINT:up:MAX:\"%7.2lf %s MAX\" ";
+$def[2] .= "COMMENT:\"\\n\" ";
+$ds_name[2] .= $LABEL[3];
+$def[2] .= "AREA:pending".rrd::color(1).":\"Pending\":STACK ";
+$def[2] .= "GPRINT:pending:LAST:\"%7.2lf %s LAST\" ";
+$def[2] .= "GPRINT:pending:MAX:\"%7.2lf %s MAX\" ";
+$def[2] .= "COMMENT:\"\\n\" ";
+
+$opt[3]  = "--vertical-label 'Threads number' -l0 --title \"IPSEC Tunnels threads queues\" ";
+$def[3]  = "";
+$def[3] .= rrd::def("idle", $RRDFILE[4], $DS[4], "MAX");
+$def[3] .= rrd::def("working", $RRDFILE[5], $DS[5], "MAX");
+$def[3] .= rrd::def("critical", $RRDFILE[6], $DS[6], "MAX");
+$def[3] .= rrd::def("high", $RRDFILE[7], $DS[7], "MAX");
+$def[3] .= rrd::def("medium", $RRDFILE[8], $DS[8], "MAX");
+$def[3] .= rrd::def("low", $RRDFILE[9], $DS[9], "MAX");
+$ds_name[3] = $LABEL[4];
+$def[3] .= "AREA:idle".rrd::color(1).":\"Idle\":STACK ";
+$def[3] .= "GPRINT:idle:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:idle:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+$ds_name[3] .= $LABEL[5];
+$def[3] .= "AREA:working".rrd::color(2).":\"Working\":STACK ";
+$def[3] .= "GPRINT:working:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:working:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+$ds_name[3] .= $LABEL[6];
+$def[3] .= "AREA:critical".rrd::color(6).":\"Critical\":STACK ";
+$def[3] .= "GPRINT:critical:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:critical:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+$ds_name[3] .= $LABEL[7];
+$def[3] .= "AREA:high".rrd::color(3).":\"High\":STACK ";
+$def[3] .= "GPRINT:high:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:high:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+$ds_name[3] .= $LABEL[8];
+$def[3] .= "AREA:medium".rrd::color(11).":\"Medium\":STACK ";
+$def[3] .= "GPRINT:medium:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:medium:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+$ds_name[3] .= $LABEL[9];
+$def[3] .= "AREA:low".rrd::color(4).":\"Low\":STACK ";
+$def[3] .= "GPRINT:low:LAST:\"%7.2lf %s LAST\" ";
+$def[3] .= "GPRINT:low:MAX:\"%7.2lf %s MAX\" ";
+$def[3] .= "COMMENT:\"\\n\" ";
+
+$opt[4]  = "--vertical-label 'Jobs number' -l0 --title \"IPSEC Tunnels jobs queues\" ";
+$def[4]  = "";
+$def[4] .= rrd::def("scheduled", $RRDFILE[10], $DS[10], "MAX");
+$def[4] .= rrd::def("critical", $RRDFILE[11], $DS[11], "MAX");
+$def[4] .= rrd::def("high", $RRDFILE[12], $DS[12], "MAX");
+$def[4] .= rrd::def("medium", $RRDFILE[13], $DS[13], "MAX");
+$def[4] .= rrd::def("low", $RRDFILE[14], $DS[14], "MAX");
+$ds_name[4] = $LABEL[10];
+$def[4] .= "AREA:scheduled".rrd::color(2).":\"Scheduled\":STACK ";
+$def[4] .= "GPRINT:scheduled:LAST:\"%7.2lf %s LAST\" ";
+$def[4] .= "GPRINT:scheduled:MAX:\"%7.2lf %s MAX\" ";
+$def[4] .= "COMMENT:\"\\n\" ";
+$ds_name[4] .= $LABEL[11];
+$def[4] .= "AREA:critical".rrd::color(6).":\"Critical\":STACK ";
+$def[4] .= "GPRINT:critical:LAST:\"%7.2lf %s LAST\" ";
+$def[4] .= "GPRINT:critical:MAX:\"%7.2lf %s MAX\" ";
+$def[4] .= "COMMENT:\"\\n\" ";
+$ds_name[4] .= $LABEL[12];
+$def[4] .= "AREA:high".rrd::color(3).":\"High\":STACK ";
+$def[4] .= "GPRINT:high:LAST:\"%7.2lf %s LAST\" ";
+$def[4] .= "GPRINT:high:MAX:\"%7.2lf %s MAX\" ";
+$def[4] .= "COMMENT:\"\\n\" ";
+$ds_name[4] .= $LABEL[13];
+$def[4] .= "AREA:medium".rrd::color(11).":\"Medium\":STACK ";
+$def[4] .= "GPRINT:medium:LAST:\"%7.2lf %s LAST\" ";
+$def[4] .= "GPRINT:medium:MAX:\"%7.2lf %s MAX\" ";
+$def[4] .= "COMMENT:\"\\n\" ";
+$ds_name[4] .= $LABEL[14];
+$def[4] .= "AREA:low".rrd::color(4).":\"Low\":STACK ";
+$def[4] .= "GPRINT:low:LAST:\"%7.2lf %s LAST\" ";
+$def[4] .= "GPRINT:low:MAX:\"%7.2lf %s MAX\" ";
+$def[4] .= "COMMENT:\"\\n\" ";
+?>
