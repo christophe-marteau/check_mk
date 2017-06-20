@@ -3,7 +3,7 @@
  * Package source files can be found under folder "src"
  
  * Package list :
-   * ipsec_status (ipsec_status-1.0.mkp)
+   * ipsec_status (ipsec_status-1.0p1.mkp)
 
 
  * Package cfg files example :
