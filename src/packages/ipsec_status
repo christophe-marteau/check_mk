@@ -13,6 +13,6 @@
            'web': []},
  'name': 'ipsec_status',
  'title': 'Strongswan ipsec status for daemon and tunnels',
- 'version': '1.0',
+ 'version': '1.0p1',
  'version.min_required': '1.2.8p22',
  'version.packaged': '1.2.8p22'}

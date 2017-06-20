@@ -116,7 +116,7 @@ then
     ipsecTunnelHeader='IPSEC Tunnel' 
     ipsecTunnelState='UNKNOWN' 
     ipseciTunnelMsg='Unable to get ipsec tunnel state'
-    ipsecTunnelTotal="$(( ${ipsecDaemonSecurityAssociationsUp} + ${ipsecDaemonSecurityAssociationsConnecting} ))"
+    ipsecTunnelTotal="$( ${ipsecBinary} statusall | grep -E "^[[:space:]]+${ipsecTunnelNamePrefix}[0-9]+:" | awk '{print $1}' | sort -u | wc -l |awk '{print $1}' )"
     debug "" "Parsing ipsec tunnels status ..."
     debug "info" "Found ${ipsecTunnelTotal} tunnel(s) ( ${ipsecDaemonSecurityAssociationsUp} up and ${ipsecDaemonSecurityAssociationsConnecting} connecting )"
 
